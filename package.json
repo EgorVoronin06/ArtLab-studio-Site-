@@ -1,0 +1,9 @@
+{
+  "name": "artlab-railway-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm --prefix \"OneDrive/Desktop/ArtLab.com\" install && npm --prefix \"OneDrive/Desktop/ArtLab.com\" run build",
+    "start": "npm --prefix \"OneDrive/Desktop/ArtLab.com\" run preview -- --host 0.0.0.0 --port $PORT"
+  }
+}
