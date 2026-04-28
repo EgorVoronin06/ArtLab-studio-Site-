@@ -31,7 +31,7 @@ jobs:
       - name: Deploy to Hosting via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ftp.timeweb.ru
+          server: artlab.ru
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: OneDrive/Desktop/ArtLab.com/dist/
