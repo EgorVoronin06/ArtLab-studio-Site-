@@ -7,26 +7,15 @@ export type AuthModalTab = 'login' | 'register' | 'recover';
 type AuthModalProps = {
   open: boolean;
   onClose: () => void;
+  onAuthSuccess?: () => void;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
-const MAX_DESC = 250;
-const MIN_AMOUNT = 1_000;
-const MAX_AMOUNT = 10_000_000;
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || 'http://localhost:3000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || '/api';
 
-function formatRub(n: number) {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0
-  }).format(n);
-}
-
-export default function AuthModal({ open, onClose }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
   const [tab, setTab] = useState<AuthModalTab>('login');
-  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -42,20 +31,21 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [recoverErrors, setRecoverErrors] = useState<Record<string, string>>({});
   const [recoverSent, setRecoverSent] = useState(false);
 
-  const [projectName, setProjectName] = useState('');
-  const [projectDesc, setProjectDesc] = useState('');
-  const [projectAmount, setProjectAmount] = useState(100_000);
-  const [projectErrors, setProjectErrors] = useState<Record<string, string>>({});
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function requestApi<T>(path: string, payload?: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload ? JSON.stringify(payload) : undefined
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload ? JSON.stringify(payload) : undefined
+      });
+    } catch {
+      throw new Error('Нет соединения с сервером. Проверьте, что backend запущен');
+    }
 
     const raw = await res.text();
     const parsed = raw ? (JSON.parse(raw) as { message?: string | string[] }) : {};
@@ -69,7 +59,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
   const resetForms = useCallback(() => {
     setTab('login');
-    setRegisterStep(1);
     setLoginEmail('');
     setLoginPassword('');
     setLoginErrors({});
@@ -81,10 +70,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setRecoverEmail('');
     setRecoverErrors({});
     setRecoverSent(false);
-    setProjectName('');
-    setProjectDesc('');
-    setProjectAmount(100_000);
-    setProjectErrors({});
     setFormMessage('');
     setIsSubmitting(false);
   }, []);
@@ -124,17 +109,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     return Object.keys(e).length === 0;
   };
 
-  const validateProject = () => {
-    const e: Record<string, string> = {};
-    if (!projectName.trim()) e.projectName = 'Введите название проекта';
-    else if (projectName.trim().length < 3) e.projectName = 'Минимум 3 символа';
-    if (projectDesc.length > MAX_DESC) e.projectDesc = `Не более ${MAX_DESC} символов`;
-    if (projectAmount < MIN_AMOUNT || projectAmount > MAX_AMOUNT)
-      e.projectAmount = `Сумма от ${formatRub(MIN_AMOUNT)} до ${formatRub(MAX_AMOUNT)}`;
-    setProjectErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const validateRecover = () => {
     const e: Record<string, string> = {};
     if (!recoverEmail.trim()) e.recoverEmail = 'Введите email';
@@ -150,6 +124,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setIsSubmitting(true);
     try {
       await requestApi('/auth/login', { email: loginEmail.trim(), password: loginPassword });
+      onAuthSuccess?.();
       onClose();
     } catch (error) {
       setFormMessage(error instanceof Error ? error.message : 'Ошибка входа');
@@ -158,16 +133,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     }
   };
 
-  const handleRegisterNext = (ev: React.FormEvent) => {
+  const handleRegisterSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validateRegisterStep1()) return;
-    setRegisterStep(2);
-    setProjectErrors({});
-  };
-
-  const handleProjectSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    if (!validateProject()) return;
     setFormMessage('');
     setIsSubmitting(true);
     try {
@@ -176,11 +144,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         email: regEmail.trim(),
         password: regPassword
       });
-      await requestApi('/projects', {
-        title: projectName.trim(),
-        description: projectDesc.trim(),
-        requestedAmount: projectAmount
-      });
+      onAuthSuccess?.();
       onClose();
     } catch (error) {
       setFormMessage(error instanceof Error ? error.message : 'Ошибка регистрации');
@@ -206,11 +170,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
   const switchTab = (t: AuthModalTab) => {
     setTab(t);
-    if (t !== 'register') setRegisterStep(1);
     setLoginErrors({});
     setRegErrors({});
     setRecoverErrors({});
-    setProjectErrors({});
     setFormMessage('');
     setIsSubmitting(false);
   };
@@ -230,24 +192,12 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       <div className="auth-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="auth-modal-header">
           <h2 id="auth-modal-title" className="auth-modal-title">
-            {tab === 'register' && registerStep === 2
-              ? 'Создание проекта'
-              : tab === 'register'
-                ? 'Регистрация'
-                : tab === 'recover'
-                  ? 'Восстановление'
-                  : 'Авторизация'}
+            {tab === 'register' ? 'Регистрация' : tab === 'recover' ? 'Восстановление' : 'Авторизация'}
           </h2>
           <button type="button" className="auth-modal-close" onClick={onClose} aria-label="Закрыть">
             ×
           </button>
         </div>
-
-        {tab === 'register' && registerStep === 1 && (
-          <button type="button" className="auth-back-link" onClick={() => switchTab('login')}>
-            ← Ко входу
-          </button>
-        )}
 
         {tab !== 'register' && (
           <div className="auth-tabs" role="tablist">
@@ -313,7 +263,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
                 className="auth-link"
                 onClick={() => {
                   setTab('register');
-                  setRegisterStep(1);
                   setLoginErrors({});
                   setRegErrors({});
                 }}
@@ -325,8 +274,11 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           </form>
         )}
 
-        {tab === 'register' && registerStep === 1 && (
-          <form onSubmit={handleRegisterNext} noValidate>
+        {tab === 'register' && (
+          <form onSubmit={handleRegisterSubmit} noValidate>
+            <button type="button" className="auth-back-link" onClick={() => switchTab('login')}>
+              ← Ко входу
+            </button>
             <div className="auth-field">
               <label className="auth-label" htmlFor="reg-name">
                 Имя
@@ -385,82 +337,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             </div>
             <div className="auth-actions">
               <button type="submit" className="auth-primary">
-                Далее
-              </button>
-            </div>
-          </form>
-        )}
-
-        {tab === 'register' && registerStep === 2 && (
-          <form onSubmit={handleProjectSubmit} noValidate>
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="project-name">
-                Название проекта
-              </label>
-              <input
-                id="project-name"
-                className={`auth-input ${projectErrors.projectName ? 'error' : ''}`}
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-              />
-              {projectErrors.projectName && (
-                <div className="auth-error">{projectErrors.projectName}</div>
-              )}
-            </div>
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="project-desc">
-                Описание проекта (до {MAX_DESC} символов)
-              </label>
-              <textarea
-                id="project-desc"
-                className={`auth-textarea ${projectErrors.projectDesc ? 'error' : ''}`}
-                rows={4}
-                maxLength={MAX_DESC}
-                value={projectDesc}
-                onChange={(e) => setProjectDesc(e.target.value)}
-              />
-              <div className="auth-char-count">
-                {projectDesc.length} / {MAX_DESC}
-              </div>
-              {projectErrors.projectDesc && (
-                <div className="auth-error">{projectErrors.projectDesc}</div>
-              )}
-            </div>
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="project-amount">
-                Запрашиваемая сумма на проект (до {formatRub(MAX_AMOUNT)})
-              </label>
-              <div className="auth-range-row">
-                <input
-                  id="project-amount"
-                  className="auth-range"
-                  type="range"
-                  min={0}
-                  max={MAX_AMOUNT}
-                  step={1000}
-                  value={projectAmount}
-                  onChange={(e) => setProjectAmount(Number(e.target.value))}
-                />
-                <span className="auth-range-value">{formatRub(projectAmount)}</span>
-              </div>
-              {projectErrors.projectAmount && (
-                <div className="auth-error">{projectErrors.projectAmount}</div>
-              )}
-            </div>
-            <div className="auth-actions">
-              <button type="submit" className="auth-primary">
-                {isSubmitting ? 'Сохранение...' : 'Создать проект'}
-              </button>
-              <button
-                type="button"
-                className="auth-secondary"
-                onClick={() => {
-                  setRegisterStep(1);
-                  setProjectErrors({});
-                }}
-              >
-                Назад
+                {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
               </button>
             </div>
             {formMessage && <div className="auth-error">{formMessage}</div>}

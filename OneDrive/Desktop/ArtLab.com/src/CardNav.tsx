@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { GoArrowUpRight } from 'react-icons/go';
 import './CardNav.css';
@@ -28,6 +28,10 @@ export interface CardNavProps {
   buttonTextColor?: string;
   theme?: 'light' | 'dark';
   onGetStartedClick?: () => void;
+  isAuthenticated?: boolean;
+  userAvatarSrc?: string | null;
+  userInitials?: string;
+  onProfileClick?: () => void;
   onCardClick?: (index: number, item: CardNavItem) => void;
   onLogoClick?: () => void;
 }
@@ -44,6 +48,10 @@ const CardNav: React.FC<CardNavProps> = ({
   buttonTextColor = '#fff',
   theme = 'light',
   onGetStartedClick,
+  isAuthenticated = false,
+  userAvatarSrc,
+  userInitials = 'U',
+  onProfileClick,
   onCardClick,
   onLogoClick
 }) => {
@@ -118,13 +126,16 @@ const CardNav: React.FC<CardNavProps> = ({
 
   useLayoutEffect(() => {
     const tl = createTimeline();
+    if (tl && isExpanded) {
+      tl.progress(1);
+    }
     tlRef.current = tl;
 
     return () => {
       tl?.kill();
       tlRef.current = null;
     };
-  }, [ease, items]);
+  }, [ease, items, isExpanded]);
 
   useLayoutEffect(() => {
     const handleResize = () => {
@@ -153,6 +164,20 @@ const CardNav: React.FC<CardNavProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [isExpanded]);
 
+  const collapseMenu = useCallback(() => {
+    const tl = tlRef.current;
+    if (!isExpanded) return;
+    if (!tl) {
+      setIsHamburgerOpen(false);
+      setIsExpanded(false);
+      return;
+    }
+
+    setIsHamburgerOpen(false);
+    tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
+    tl.reverse();
+  }, [isExpanded]);
+
   const toggleMenu = () => {
     const tl = tlRef.current;
     if (!tl) return;
@@ -161,7 +186,6 @@ const CardNav: React.FC<CardNavProps> = ({
       setIsExpanded(true);
       tl.play(0);
     } else {
-      setIsHamburgerOpen(false);
       tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
       tl.reverse();
     }
@@ -207,14 +231,30 @@ const CardNav: React.FC<CardNavProps> = ({
             <div className="hamburger-line" />
           </div>
 
-          <button
-            type="button"
-            className="card-nav-cta-button"
-            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
-            onClick={() => onGetStartedClick?.()}
-          >
-            Get Started
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="card-nav-avatar-btn"
+              style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
+              onClick={() => onProfileClick?.()}
+              aria-label="Открыть личный кабинет"
+            >
+              {userAvatarSrc ? (
+                <img src={userAvatarSrc} alt="Аватар пользователя" className="card-nav-avatar-image" />
+              ) : (
+                <span className="card-nav-avatar-fallback">{userInitials}</span>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="card-nav-cta-button"
+              style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
+              onClick={() => onGetStartedClick?.()}
+            >
+              Get Started
+            </button>
+          )}
         </div>
 
         <div className="card-nav-content" aria-hidden={!isExpanded}>
@@ -226,11 +266,15 @@ const CardNav: React.FC<CardNavProps> = ({
               style={{ backgroundColor: item.bgColor, color: item.textColor }}
               role="button"
               tabIndex={0}
-              onClick={() => onCardClick?.(idx, item)}
+              onClick={() => {
+                onCardClick?.(idx, item);
+                collapseMenu();
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
                   onCardClick?.(idx, item);
+                  collapseMenu();
                 }
               }}
             >
