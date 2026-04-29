@@ -48,13 +48,22 @@ export default function AuthModal({ open, onClose, onAuthSuccess }: AuthModalPro
     }
 
     const raw = await res.text();
-    const parsed = raw ? (JSON.parse(raw) as { message?: string | string[] }) : {};
+    let parsed: { message?: string | string[] } = {};
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw) as { message?: string | string[] };
+      } catch {
+        if (!res.ok) {
+          throw new Error('Сервер вернул не-JSON ответ. Проверьте настройку API (/api).');
+        }
+      }
+    }
     if (!res.ok) {
       const message = Array.isArray(parsed.message) ? parsed.message.join(', ') : parsed.message;
       throw new Error(message || 'Ошибка сервера');
     }
 
-    return (raw ? JSON.parse(raw) : {}) as T;
+    return parsed as T;
   }
 
   const resetForms = useCallback(() => {

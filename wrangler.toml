@@ -2,6 +2,9 @@ name = "artlab"
 main = "worker.js"
 compatibility_date = "2026-04-29"
 
+[vars]
+API_ORIGIN = "https://your-backend-domain.com"
+
 [assets]
 directory = "OneDrive/Desktop/ArtLab.com/dist"
 not_found_handling = "single-page-application"
