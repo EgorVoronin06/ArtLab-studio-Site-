@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -15,6 +16,11 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
+  // Keep frontend calls to /api/* compatible while controllers stay on /auth, /projects, /news.
+  app.use('/api', (req: Request, _res: Response, next: NextFunction) => {
+    req.url = req.url.replace(/^\/+/, '/');
+    next();
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

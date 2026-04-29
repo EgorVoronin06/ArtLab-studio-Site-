@@ -4,6 +4,11 @@
   "version": "1.0.0",
   "scripts": {
     "build": "npm --prefix \"OneDrive/Desktop/ArtLab.com\" install && npm --prefix \"OneDrive/Desktop/ArtLab.com\" run build",
+    "start:single": "npm --prefix \"OneDrive/Desktop/ArtLab.com/backend\" run start:single",
     "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workerd-windows-64": "^1.20260426.1",
+    "wrangler": "^4.86.0"
   }
 }

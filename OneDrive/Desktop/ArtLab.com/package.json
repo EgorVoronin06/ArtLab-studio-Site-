@@ -6,19 +6,25 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:up": "npm --prefix ./backend run db:up",
+    "db:down": "npm --prefix ./backend run db:down",
+    "start:single": "npm --prefix ./backend run start:single"
   },
   "devDependencies": {
+    "@cloudflare/workerd-windows-64": "^1.20260426.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/validator": "^13.15.10",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "~6.0.2",
-    "vite": "^8.0.9"
+    "vite": "^8.0.9",
+    "wrangler": "^4.86.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
+    "artlab-cloudflare-root": "file:../../..",
     "framer-motion": "^12.38.0",
     "gsap": "^3.15.0",
     "ogl": "^1.0.11",
