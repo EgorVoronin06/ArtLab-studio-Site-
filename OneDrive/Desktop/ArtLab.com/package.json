@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "db:up": "npm --prefix ./backend run db:up",
     "db:down": "npm --prefix ./backend run db:down",
+    "start:dev": "npm --prefix ./backend run start:dev",
     "start:single": "npm --prefix ./backend run start:single"
   },
   "devDependencies": {

@@ -219,6 +219,8 @@ export default function Orb({
       program.uniforms.iResolution.value.set(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height);
     }
     window.addEventListener('resize', resize);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => resize()) : null;
+    ro?.observe(localContainer);
     resize();
 
     let targetHover = 0;
@@ -245,8 +247,27 @@ export default function Orb({
       targetHover = 0;
     };
 
+    const handleTouch = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      const t = e.touches[0];
+      const rect = localContainer.getBoundingClientRect();
+      const x = t.clientX - rect.left;
+      const y = t.clientY - rect.top;
+      const width = rect.width;
+      const height = rect.height;
+      const size = Math.min(width, height);
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const uvX = ((x - centerX) / size) * 2.0;
+      const uvY = ((y - centerY) / size) * 2.0;
+      targetHover = Math.sqrt(uvX * uvX + uvY * uvY) < 0.8 ? 1 : 0;
+    };
+
     localContainer.addEventListener('mousemove', handleMouseMove);
     localContainer.addEventListener('mouseleave', handleMouseLeave);
+    localContainer.addEventListener('touchmove', handleTouch, { passive: true });
+    localContainer.addEventListener('touchstart', handleTouch, { passive: true });
+    localContainer.addEventListener('touchend', handleMouseLeave);
 
     let rafId = 0;
     const update = (t: number) => {
@@ -273,8 +294,12 @@ export default function Orb({
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
+      ro?.disconnect();
       localContainer.removeEventListener('mousemove', handleMouseMove);
       localContainer.removeEventListener('mouseleave', handleMouseLeave);
+      localContainer.removeEventListener('touchmove', handleTouch);
+      localContainer.removeEventListener('touchstart', handleTouch);
+      localContainer.removeEventListener('touchend', handleMouseLeave);
       localContainer.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };

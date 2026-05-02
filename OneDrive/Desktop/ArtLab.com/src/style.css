@@ -42,6 +42,8 @@ body {
   position: relative;
   width: min(1440px, 100%);
   height: 880px;
+  /* Vertical anchor shared by .center-logo and .orb-container (shader centers on canvas) */
+  --orb-logo-y: 50%;
   background:
     radial-gradient(circle at top left, rgba(91, 200, 255, 0.16), transparent 36%),
     radial-gradient(circle at top right, rgba(242, 127, 224, 0.14), transparent 30%),
@@ -53,7 +55,7 @@ body {
 .center-logo {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: var(--orb-logo-y);
   transform: translate(-50%, -50%);
   width: min(90%, 900px);
   height: auto;
@@ -549,16 +551,17 @@ body {
 
   .orb-section {
     width: 100%;
-    height: auto;
+    height: 100svh;
     min-height: 100svh;
     border-radius: 0;
     padding-top: 76px;
-    overflow: visible;
+    overflow: hidden;
+    /* Align hero logo + orb center with visual balance under fixed nav */
+    --orb-logo-y: 42%;
   }
 
   .center-logo {
     width: min(92vw, 520px);
-    top: 42%;
   }
 
   .home-news-page,
@@ -660,5 +663,60 @@ body {
     width: 40px;
     height: 40px;
     padding: 5px;
+  }
+}
+
+@media (max-width: 430px) {
+  .page {
+    padding: 0 0 12px;
+  }
+
+  .orb-section {
+    padding-top: 70px;
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .home-news-page,
+  .projects-page,
+  .profile-page,
+  .about-page {
+    width: calc(100% - 10px);
+    margin: 6px auto;
+  }
+
+  .home-news-content,
+  .projects-page,
+  .profile-page,
+  .about-page {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .home-news-content h1,
+  .projects-page h1,
+  .profile-page h1,
+  .about-page h1 {
+    font-size: 22px;
+  }
+
+  .profile-input,
+  .about-back-btn,
+  .profile-delete-btn {
+    min-height: 42px;
+  }
+
+  .project-showcase-media {
+    height: 150px;
+  }
+
+  .project-inline-media {
+    height: 118px;
+  }
+
+  .profile-project-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 }

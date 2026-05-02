@@ -14,6 +14,40 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || '/api';
 
+/** NestJS и др.: message строка | массив | объект полей; иначе statusCode + error */
+function formatHttpError(res: Response, raw: string, parsed: unknown): string {
+  if (!raw?.trim()) {
+    return `Сервер ответил с кодом ${res.status} без текста. Проверьте логи API и базу данных.`;
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
+    return `Ошибка ${res.status}. Ответ не в формате JSON.`;
+  }
+  const p = parsed as Record<string, unknown>;
+  const msg = p.message;
+  if (typeof msg === 'string' && msg.trim()) return msg.trim();
+  if (Array.isArray(msg)) {
+    const lines = msg.map((m) => String(m)).filter(Boolean);
+    if (lines.length) return lines.join(', ');
+  }
+  if (typeof msg === 'object' && msg !== null) {
+    const lines: string[] = [];
+    for (const [, v] of Object.entries(msg as Record<string, unknown>)) {
+      if (Array.isArray(v)) lines.push(...v.map((x) => String(x)));
+      else if (typeof v === 'string') lines.push(v);
+    }
+    if (lines.length) return lines.join(', ');
+  }
+  const err = p.error;
+  if (typeof err === 'string' && err.trim()) {
+    return `${err} (код ${res.status})`;
+  }
+  const sc = p.statusCode;
+  if (typeof sc === 'number') {
+    return `Запрос отклонён (код ${sc}). Откройте консоль браузера → Network → смотрите тело ответа.`;
+  }
+  return `Ошибка сервера (HTTP ${res.status}).`;
+}
+
 export default function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
   const [tab, setTab] = useState<AuthModalTab>('login');
 
@@ -48,19 +82,24 @@ export default function AuthModal({ open, onClose, onAuthSuccess }: AuthModalPro
     }
 
     const raw = await res.text();
-    let parsed: { message?: string | string[] } = {};
+    let parsed: unknown = {};
     if (raw) {
       try {
-        parsed = JSON.parse(raw) as { message?: string | string[] };
+        parsed = JSON.parse(raw) as unknown;
       } catch {
         if (!res.ok) {
-          throw new Error('Сервер вернул не-JSON ответ. Проверьте настройку API (/api).');
+          const hint =
+            res.status === 502 || res.status === 503
+              ? ' Прокси не достучался до backend (запустите API на порту 3000).'
+              : '';
+          throw new Error(
+            `Сервер вернул не-JSON (HTTP ${res.status}).${hint} Проверьте настройку /api и вкладку Network.`
+          );
         }
       }
     }
     if (!res.ok) {
-      const message = Array.isArray(parsed.message) ? parsed.message.join(', ') : parsed.message;
-      throw new Error(message || 'Ошибка сервера');
+      throw new Error(formatHttpError(res, raw, parsed));
     }
 
     return parsed as T;

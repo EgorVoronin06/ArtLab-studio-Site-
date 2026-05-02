@@ -228,7 +228,13 @@
   }
 
   .card-nav-cta-button {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 0.7rem;
+    font-size: 13px;
+    border-radius: 9px;
   }
 
   .card-nav-avatar-btn {
@@ -258,5 +264,45 @@
 
   .nav-card-link {
     font-size: 15px;
+  }
+}
+
+@media (max-width: 430px) {
+  .card-nav-container {
+    width: calc(100% - 12px);
+    top: 6px;
+  }
+
+  .card-nav-top {
+    padding: 0.45rem 0.7rem;
+  }
+
+  .card-nav-cta-button {
+    height: 34px;
+    padding: 0 0.55rem;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  .card-nav-logo {
+    width: 112px;
+  }
+
+  .card-nav-content {
+    padding: 0.35rem;
+    gap: 6px;
+  }
+
+  .nav-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .nav-card-label {
+    font-size: 17px;
+  }
+
+  .nav-card-link {
+    font-size: 14px;
   }
 }

@@ -1,5 +1,6 @@
 .orb-container {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 0;
   width: 100%;
   height: 100%;
@@ -12,4 +13,25 @@
   border: none;
   outline: none;
   box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .orb-container {
+    /* Same center as .center-logo (--orb-logo-y on .orb-section); oversize canvas so glow still fills edges */
+    inset: auto;
+    left: 50%;
+    top: var(--orb-logo-y, 50%);
+    transform: translate(-50%, -50%);
+    width: min(200vmin, 220vw);
+    height: min(200vmin, 220vh);
+    max-width: none;
+    max-height: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .orb-container {
+    width: min(210vmin, 240vw);
+    height: min(210vmin, 240vh);
+  }
 }
